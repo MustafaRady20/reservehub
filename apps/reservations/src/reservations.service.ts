@@ -8,11 +8,11 @@ import { Types } from 'mongoose';
 export class ReservationsService {
   constructor(private readonly reservationRepository:ReservationRepository){}
 
-  create(createReservationDto: CreateReservationDto) {
+  async create(createReservationDto: CreateReservationDto,userId:string) {
     return this.reservationRepository.create({
       ...createReservationDto,
       timeStamp: new Date(),
-      userId: "123"
+      userId: userId
     });
   }
 
