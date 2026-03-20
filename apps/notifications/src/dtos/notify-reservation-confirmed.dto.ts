@@ -1,7 +1,6 @@
-import { IsDate, IsEmail, IsNotEmpty, IsString } from 'class-validator';
-import { Type } from 'class-transformer';
+import { IsEmail, IsNotEmpty, IsNumber, IsString } from 'class-validator';
 
-export class NotifyReservationCreatedDto {
+export class NotifyPaymentConfirmedDto {
   @IsEmail()
   email: string;
 
@@ -15,13 +14,8 @@ export class NotifyReservationCreatedDto {
 
   @IsNotEmpty()
   @IsString()
-  placeId: string;
+  invoiceId: string;
 
-  @IsDate()
-  @Type(() => Date)
-  startDate: Date;
-
-  @IsDate()
-  @Type(() => Date)
-  endDate: Date;
+  @IsNumber()
+  amount: number;
 }
