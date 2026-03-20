@@ -4,29 +4,54 @@ import { UpdateReservationDto } from './dto/update-reservation.dto';
 import { ReservationRepository } from './reservation.repository';
 import { Types } from 'mongoose';
 import { ClientProxy } from '@nestjs/microservices';
-import { PAYMENT_SERVICE } from '@app/common';
+import { NOTIFICATION_SERVICE, PAYMENT_SERVICE, UserDto } from '@app/common';
 import { map } from "rxjs"
 @Injectable()
 export class ReservationsService {
   constructor(
     private readonly reservationRepository: ReservationRepository,
-    @Inject(PAYMENT_SERVICE) private readonly paymentClient: ClientProxy
+    @Inject(PAYMENT_SERVICE) private readonly paymentClient: ClientProxy,
+    @Inject(NOTIFICATION_SERVICE) private readonly notificationClient: ClientProxy,
   ) { }
 
-  async create(createReservationDto: CreateReservationDto, userId: string) {
+  async create(createReservationDto: CreateReservationDto, user:UserDto) {
 
-    return this.paymentClient
+    this.paymentClient
       .send('create_charge', createReservationDto.charge)
       .pipe(
-        map((paymentIntent) => {
-          return this.reservationRepository.create({
+        map(async (paymentIntent) => {
+          const reservation = await this.reservationRepository.create({
             ...createReservationDto,
             timeStamp: new Date(),
-            userId,
-            invoiceId: paymentIntent.id, 
+            userId:new Types.ObjectId(user._id),
+            placeId:new Types.ObjectId(createReservationDto.placeId),
+            invoiceId: paymentIntent.id,
           });
+
+          this.notificationClient.emit('reservation_created', {
+            reservationId: reservation._id.toString(),
+            placeId: reservation.placeId,
+            startDate: reservation.startDate,
+            endDate: reservation.endDate,
+            email: user?.email,
+            name: user?.name,
+          });
+
+          // Also emit payment_confirmed
+          this.notificationClient.emit('payment_confirmed', {
+            reservationId: reservation._id.toString(),
+            invoiceId: reservation.invoiceId,
+            amount: createReservationDto.charge.amount,
+            email: user.email,
+            name: user.name,
+          });
+
+          return reservation;
         }),
+
       );
+
+
   }
 
   async findAll() {
@@ -42,6 +67,15 @@ export class ReservationsService {
   }
 
   async remove(_id: string) {
-    return this.reservationRepository.findOndAndDelete({ _id: new Types.ObjectId(_id) });
+    const reservation = await this.reservationRepository.findOndAndDelete({ _id: new Types.ObjectId(_id) });
+
+    this.notificationClient.emit('reservation_cancelled', {
+      reservationId: reservation._id.toString(),
+      placeId: (reservation as any).placeId,
+      email: (reservation as any).userId.email,
+      name: (reservation as any).userId.name,
+    });
+
+    return reservation;
   }
 }

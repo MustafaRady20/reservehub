@@ -10,7 +10,7 @@ import {
 } from './models/reservation.schema';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ClientsModule, Transport } from '@nestjs/microservices';
-import { AUTH_SERVICE, PAYMENT_SERVICE } from '@app/common/constants/services';
+import { AUTH_SERVICE, NOTIFICATION_SERVICE, PAYMENT_SERVICE } from '@app/common/constants/services';
 
 @Module({
   imports: [
@@ -43,7 +43,7 @@ import { AUTH_SERVICE, PAYMENT_SERVICE } from '@app/common/constants/services';
             }
           }
         }),
-        inject:[ConfigService]
+        inject: [ConfigService]
       },
       {
         name: PAYMENT_SERVICE,
@@ -57,11 +57,24 @@ import { AUTH_SERVICE, PAYMENT_SERVICE } from '@app/common/constants/services';
             }
           }
         }),
-        inject:[ConfigService]
+        inject: [ConfigService]
+      },
+
+      {
+        name: NOTIFICATION_SERVICE,
+        useFactory: (configService: ConfigService) => ({
+          transport: Transport.RMQ,
+          options: {
+            urls: [configService.getOrThrow<string>('RABBITMQ_URI')],
+            queue: 'notifications',
+            queueOptions: { durable: true },
+          },
+        }),
+        inject: [ConfigService],
       },
     ]),
   ],
   controllers: [ReservationsController],
   providers: [ReservationsService, ReservationRepository],
 })
-export class ReservationsModule {}
+export class ReservationsModule { }

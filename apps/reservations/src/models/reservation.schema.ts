@@ -1,5 +1,6 @@
 import { AbstractDocument } from '@app/common';
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { Types } from 'mongoose';
 
 @Schema({ versionKey: false })
 export class ReservationDocument extends AbstractDocument {
@@ -10,11 +11,11 @@ export class ReservationDocument extends AbstractDocument {
   @Prop()
   endDate: Date;
 
-  @Prop()
-  userId: string;
+  @Prop({type:Types.ObjectId,ref:"User"})
+  userId: Types.ObjectId;
 
-  @Prop()
-  placeId: string;
+  @Prop({type:Types.ObjectId,ref:"Place"})
+  placeId: Types.ObjectId;
 
   @Prop()
   invoiceId: string;
